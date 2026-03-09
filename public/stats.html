@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Game Statistics</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #333;
+    }
+
+    h1 {
+      font-size: 2rem;
+    }
+
+    .back-link {
+      padding: 10px 20px;
+      background: #2E86FF;
+      color: white;
+      text-decoration: none;
+      border-radius: 5px;
+    }
+
+    .back-link:hover {
+      background: #1a6fd9;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: #16213e;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      color: #aaa;
+      margin-bottom: 10px;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: bold;
+    }
+
+    .section {
+      background: #16213e;
+      padding: 25px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 1.3rem;
+      margin-bottom: 20px;
+    }
+
+    .achievements-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 15px;
+    }
+
+    .achievement {
+      background: #0f3460;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .achievement.locked {
+      opacity: 0.3;
+    }
+
+    .achievement-icon {
+      font-size: 2rem;
+      margin-bottom: 8px;
+    }
+
+    .achievement-name {
+      font-size: 0.8rem;
+    }
+
+    .match-item {
+      background: #0f3460;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .match-opponent {
+      font-weight: bold;
+    }
+
+    .match-meta {
+      font-size: 0.85rem;
+      color: #999;
+    }
+
+    .match-badge {
+      padding: 5px 15px;
+      border-radius: 5px;
+      font-weight: bold;
+      font-size: 0.85rem;
+    }
+
+    .match-badge.win {
+      background: #2ED573;
+      color: #000;
+    }
+
+    .match-badge.loss {
+      background: #FF4757;
+      color: #fff;
+    }
+
+    .match-badge.draw {
+      background: #FFD32A;
+      color: #000;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📊 Game Statistics</h1>
+    <a href="/profile.html" class="back-link">← Back</a>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Wins</div>
+      <div class="stat-value" id="winsCount">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Losses</div>
+      <div class="stat-value" id="lossesCount">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Draws</div>
+      <div class="stat-value" id="drawsCount">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Matches</div>
+      <div class="stat-value" id="matchesCount">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Win Rate</div>
+      <div class="stat-value" id="winRate">0%</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">ELO Rating</div>
+      <div class="stat-value" id="eloRating">1000</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🏆 Achievements</div>
+    <div class="achievements-grid" id="achievementsGrid">
+      <div class="empty-state">Loading...</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📋 Match History</div>
+    <div id="matchList">
+      <div class="empty-state">No matches yet</div>
+    </div>
+  </div>
+
+  <script>
+    let token = sessionStorage.getItem('authToken');
+    let email = sessionStorage.getItem('userEmail');
+
+    if (!token) {
+      window.location.href = '/login';
+    }
+
+    async function loadStats() {
+      try {
+        const res = await fetch(`/api/progression/progression`, {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+        const data = await res.json();
+        document.getElementById('winsCount').textContent = data.wins;
+        document.getElementById('lossesCount').textContent = data.losses;
+        document.getElementById('drawsCount').textContent = data.draws;
+        document.getElementById('matchesCount').textContent = data.matches;
+        document.getElementById('winRate').textContent = data.winRate + '%';
+        document.getElementById('eloRating').textContent = Math.round(data.elo);
+      } catch (err) {
+        console.error('Error loading stats:', err);
+      }
+    }
+
+    async function loadAchievements() {
+      try {
+        const res = await fetch(`/api/achievements`, {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+        const achievements = await res.json();
+
+        const allAchievements = [
+          { id: 'first-win', name: 'First Win!', icon: '🎉' },
+          { id: 'second-win', name: 'Second Win', icon: '🔥' },
+          { id: 'third-win', name: 'Third Win', icon: '⭐' }
+        ];
+
+        const grid = document.getElementById('achievementsGrid');
+        grid.innerHTML = '';
+
+        allAchievements.forEach(ach => {
+          const unlocked = achievements.some(a => a.id === ach.id);
+          const div = document.createElement('div');
+          div.className = `achievement ${unlocked ? '' : 'locked'}`;
+          div.innerHTML = `
+            <div class="achievement-icon">${ach.icon}</div>
+            <div class="achievement-name">${ach.name}</div>
+          `;
+          grid.appendChild(div);
+        });
+      } catch (err) {
+        console.error('Error loading achievements:', err);
+      }
+    }
+
+    async function loadMatchHistory() {
+      try {
+        const res = await fetch(`/api/matches/history?limit=50`, {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+        const matches = await res.json();
+
+        const list = document.getElementById('matchList');
+        
+        if (matches.length === 0) {
+          list.innerHTML = '<div class="empty-state">No matches yet</div>';
+          return;
+        }
+
+        list.innerHTML = '';
+        matches.forEach(match => {
+          const div = document.createElement('div');
+          div.className = 'match-item';
+          
+          const opponent = match.opponentNickname || match.opponent || 'Unknown';
+          const result = match.result || 'unknown';
+          const date = new Date(match.date).toLocaleDateString();
+          
+          div.innerHTML = `
+            <div>
+              <div class="match-opponent">vs ${opponent}</div>
+              <div class="match-meta">${date}</div>
+            </div>
+            <div class="match-badge ${result}">${result.toUpperCase()}</div>
+          `;
+          list.appendChild(div);
+        });
+      } catch (err) {
+        console.error('Error loading match history:', err);
+      }
+    }
+
+    loadStats();
+    loadAchievements();
+    loadMatchHistory();
+  </script>
+</body>
+</html>
